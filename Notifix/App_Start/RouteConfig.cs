@@ -17,7 +17,7 @@ namespace Notifix
             routes.MapRoute(
                 name: "Default",
                 url: "notifix/api/start",
-                defaults: new { controller = "Notifix", action = "checkService" }
+                defaults: new { controller = "Notifix", action = "CheckService" }
             );
         }
     }
