@@ -27,9 +27,9 @@ namespace Notifix.Controllers
 
         [Route("checklogin")]
         [HttpPost]
-        public String CheckLogin([FromBody]String login)
+        public String CheckLogin([FromBody]String loginData)
         {
-            User user = JsonConvert.DeserializeObject<User>(login);
+            User user = JsonConvert.DeserializeObject<User>(loginData);
             String response;
             string toHash = user.login + user.password;
             var hashedString = Sha256encrypt(toHash);
@@ -49,42 +49,61 @@ namespace Notifix.Controllers
             return response;
         }
 
-        [Route("registeruser")]
+        [Route("checkUniqueLoginEmail")]
         [HttpPost]
-        public HttpResponseMessage RegisterUser([FromBody]DynamicJsonObject newUser)
+        public String CheckUniqueLoginEmail([FromBody]String credentials)
         {
-            //@todo INSERT BDD
+            User user = JsonConvert.DeserializeObject<User>(credentials);
+            String response;
             using (UserContext ctx = new UserContext())
             {
-                User user = new User();
-                ctx.userList.Add(user);
-                ctx.SaveChanges();
+                if (ctx.userList.Any(q => q.login == user.login))
+                {
+                    response = "403login";
+                }
+                else if (ctx.userList.Any(q => q.email == user.email))
+                {
+                    response = "403pwd";
+                } else {
+                    response = "200";
+                }
             }
-         
 
-            return Request.CreateResponse(HttpStatusCode.OK, "user created:");
+            return response;
         }
 
-        // GET: api/Notifix/5
-        //public string Get(int id)
-        //{
-        //    return "value";
-        //}
+        [Route("registeruser")]
+        [HttpPost]
+        public String RegisterUser([FromBody]String newUser)
+        {
+            User user = JsonConvert.DeserializeObject<User>(newUser);
+            user.password = Sha256encrypt(user.password);
+            String res;
+            using (UserContext ctx = new UserContext())
+            {
+                ctx.userList.Add(user);
+                int dbReturn = ctx.SaveChanges();
 
-        //// POST: api/Notifix
-        //public void Post([FromBody]string value)
-        //{
-        //}
+                res = dbReturn == 1 ? "200" + user.password : "404";
+            }
+            return res;
+        }
 
-        //// PUT: api/Notifix/5
-        //public void Put(int id, [FromBody]string value)
-        //{
-        //}
+        [Route("savenotification")]
+        [HttpPost]
+        public String SaveNotification([FromBody]String newNotification)
+        {
+            Notification notif = JsonConvert.DeserializeObject<Notification>(newNotification);
+            String res;
+            using (NotificationContext ctx = new NotificationContext())
+            {
+                ctx.notificationList.Add(notif);
+                int dbReturn = ctx.SaveChanges();
 
-        // DELETE: api/Notifix/5
-        //public void Delete(int id)
-        //{
-        //}
+                res = dbReturn == 1 ? "200" : "404";
+            }
+            return res;
+        }
 
         private string Sha256encrypt(string phrase)
         {

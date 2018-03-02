@@ -27,6 +27,10 @@ namespace Notifix.Models
         [Required]
         public string login { get; set; }
 
+        [Column("email")]
+        [Required]
+        public string email { get; set; }
+
         [Column("password")]
         [Required]
         [DataType(DataType.Password)]
