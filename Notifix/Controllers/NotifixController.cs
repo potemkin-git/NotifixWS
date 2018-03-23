@@ -94,31 +94,75 @@ namespace Notifix.Controllers
                 ctx.userList.Add(user);
                 int dbReturn = ctx.SaveChanges();
 
-                res = dbReturn == 1 ? "200"+hashedString : "404"+hashedString;
+                res = dbReturn == 1 ? "200"+hashedString : "404";
             }
             return res;
         }
 
         [Route("savenotification")]
         [HttpPost]
-        public int SaveNotification([FromBody]String newNotification)
+        public string SaveNotification([FromBody]String jsonRequest)
         {
-            Notification notif = JsonConvert.DeserializeObject<Notification>(newNotification);
-            int dbReturn;
+            dynamic tmp = JsonConvert.DeserializeObject(jsonRequest);
+            string loginReq = (string)tmp.login;
+            string hashReq = (string)tmp.hash;
+
+            Notification notif = JsonConvert.DeserializeObject<Notification>(jsonRequest);
+            string dbReturn = "0";
 
             using (UserContext ctxUser = new UserContext())
             {
                 using (NotificationContext ctxNotification = new NotificationContext())
                 {
-                    var user = ctxUser.userList.FirstOrDefault(q => q.login == "Potemkin");
-                    notif.user = user;
-                    ctxNotification.notificationList.Add(notif);
-                    ctxNotification.Entry(user).State = user.id == 0 ? EntityState.Added : EntityState.Modified;
-                    dbReturn = ctxNotification.SaveChanges();
+                    User user = ctxUser.userList.FirstOrDefault(q => q.login == loginReq);
+                    if (user != null)
+                    {
+                        string userHash = Sha256encrypt(user.login + user.password);
+                        if (userHash == hashReq)
+                        {
+                            notif.user = user;
+                            ctxNotification.notificationList.Add(notif);
+                            ctxNotification.Entry(user).State = user.id == 0 ? EntityState.Added : EntityState.Modified;
+                            int res = ctxNotification.SaveChanges();
+                            dbReturn = res > 0 ? userHash : "0";
+                        }
+                    }
                 }
             }
 
             return dbReturn;
+        }
+
+        [Route("getNotifications")]
+        [HttpGet]
+        public JArray GetAllNotifications()
+        {
+            var notifList = new JArray();
+
+            using (NotificationContext ctxNotification = new NotificationContext())
+            {
+                List<Notification> notifs = ctxNotification.notificationList.Include("User").ToList();
+
+                foreach (Notification notification in notifs)
+                {
+                    User user = notification.user;
+                    String token = Sha256encrypt(user.login + user.password);
+
+                    dynamic notifCustom = new JObject();
+                    notifCustom.userToken = token;
+                    notifCustom.desc = notification.description;
+                    notifCustom.type = notification.type;
+                    notifCustom.date = notification.expirationDate.ToString("dd-MM-yyyy");
+                    notifCustom.time = notification.expirationDate.ToString("h:mm");
+                    notifCustom.lat = notification.latitude;
+                    notifCustom.lng = notification.longitude;
+                    notifCustom.nbConf = notification.nbConf;
+                    notifCustom.nbDeny = notification.nbDeny;
+                    notifList.Add(notifCustom);
+                }
+            }                      
+
+            return notifList;
         }
 
         private string Sha256encrypt(string phrase)
