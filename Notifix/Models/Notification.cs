@@ -10,6 +10,11 @@ namespace Notifix.Models
     [Table("Notification")]
     public class Notification
     {
+        public Notification()
+        {
+            creationDate = DateTime.Now;
+        }
+
         [Key]
         public int id { get; set; }
 
@@ -24,9 +29,8 @@ namespace Notifix.Models
         [Column("description")]
         public string description { get; set; }
 
-        [Timestamp]
         [Required]
-        public Byte[] creationDate { get; set; }
+        public DateTime creationDate { get; set; }
 
         [Column("exp_date")]
         [Required]

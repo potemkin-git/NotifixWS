@@ -249,25 +249,9 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\201802011545114_notifixDbUpdate.cs" />
-    <Compile Include="Migrations\201802011545114_notifixDbUpdate.Designer.cs">
-      <DependentUpon>201802011545114_notifixDbUpdate.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201802021319236_User.cs" />
-    <Compile Include="Migrations\201802021319236_User.Designer.cs">
-      <DependentUpon>201802021319236_User.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201802021325324_Notification.cs" />
-    <Compile Include="Migrations\201802021325324_Notification.Designer.cs">
-      <DependentUpon>201802021325324_Notification.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201802021328479_Notification1.cs" />
-    <Compile Include="Migrations\201802021328479_Notification1.Designer.cs">
-      <DependentUpon>201802021328479_Notification1.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\201803021416155_User1.cs" />
-    <Compile Include="Migrations\201803021416155_User1.Designer.cs">
-      <DependentUpon>201803021416155_User1.cs</DependentUpon>
+    <Compile Include="Migrations\201803222148185_User.cs" />
+    <Compile Include="Migrations\201803222148185_User.Designer.cs">
+      <DependentUpon>201803222148185_User.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\Notification.cs" />
@@ -325,20 +309,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\201802011545114_notifixDbUpdate.resx">
-      <DependentUpon>201802011545114_notifixDbUpdate.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201802021319236_User.resx">
-      <DependentUpon>201802021319236_User.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201802021325324_Notification.resx">
-      <DependentUpon>201802021325324_Notification.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201802021328479_Notification1.resx">
-      <DependentUpon>201802021328479_Notification1.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\201803021416155_User1.resx">
-      <DependentUpon>201803021416155_User1.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\201803222148185_User.resx">
+      <DependentUpon>201803222148185_User.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

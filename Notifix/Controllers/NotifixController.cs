@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Notifix.Models;
 using System.Security.Cryptography;
 using System.Text;
+using System.Data.Entity;
 
 namespace Notifix.Controllers
 {
@@ -23,30 +24,6 @@ namespace Notifix.Controllers
         public String CheckService()
         {
           return "Service Notifix Working";
-        }
-
-        [Route("checklogin")]
-        [HttpPost]
-        public String CheckLogin([FromBody]String loginData)
-        {
-            User user = JsonConvert.DeserializeObject<User>(loginData);
-            String response;
-            string toHash = user.login + user.password;
-            var hashedString = Sha256encrypt(toHash);
-
-
-            using (UserContext ctx = new UserContext())
-            {
-                if (ctx.userList.Any(q => q.login == user.login && q.password == user.password))
-                {
-                    response = "200"+hashedString;
-                } else
-                {
-                    response = "403"+hashedString;
-                }
-            }
-
-            return response;
         }
 
         [Route("checkUniqueLoginEmail")]
@@ -64,8 +41,38 @@ namespace Notifix.Controllers
                 else if (ctx.userList.Any(q => q.email == user.email))
                 {
                     response = "403pwd";
-                } else {
+                }
+                else
+                {
                     response = "200";
+                }
+            }
+
+            return response;
+        }
+
+        [Route("checklogin")]
+        [HttpPost]
+        public String CheckLogin([FromBody]String loginData)
+        {
+            User user = JsonConvert.DeserializeObject<User>(loginData);
+            user.password = Sha256encrypt(user.password);
+            string toHash = user.login + user.password;
+            var hashedString = Sha256encrypt(toHash);
+            String response;
+
+            using (UserContext ctx = new UserContext())
+            {
+                if (ctx.userList.Any(q => q.login == user.login && q.password == user.password))
+                {
+                    response = "200"+hashedString;
+                } else if (!ctx.userList.Any(q => q.login == user.login))
+                {
+                    response = "403login";
+                }
+                else
+                {
+                    response = "403password";
                 }
             }
 
@@ -78,31 +85,40 @@ namespace Notifix.Controllers
         {
             User user = JsonConvert.DeserializeObject<User>(newUser);
             user.password = Sha256encrypt(user.password);
+            string toHash = user.login + user.password;
+            var hashedString = Sha256encrypt(toHash);
             String res;
+
             using (UserContext ctx = new UserContext())
             {
                 ctx.userList.Add(user);
                 int dbReturn = ctx.SaveChanges();
 
-                res = dbReturn == 1 ? "200" + user.password : "404";
+                res = dbReturn == 1 ? "200"+hashedString : "404"+hashedString;
             }
             return res;
         }
 
         [Route("savenotification")]
         [HttpPost]
-        public String SaveNotification([FromBody]String newNotification)
+        public int SaveNotification([FromBody]String newNotification)
         {
             Notification notif = JsonConvert.DeserializeObject<Notification>(newNotification);
-            String res;
-            using (NotificationContext ctx = new NotificationContext())
-            {
-                ctx.notificationList.Add(notif);
-                int dbReturn = ctx.SaveChanges();
+            int dbReturn;
 
-                res = dbReturn == 1 ? "200" : "404";
+            using (UserContext ctxUser = new UserContext())
+            {
+                using (NotificationContext ctxNotification = new NotificationContext())
+                {
+                    var user = ctxUser.userList.FirstOrDefault(q => q.login == "Potemkin");
+                    notif.user = user;
+                    ctxNotification.notificationList.Add(notif);
+                    ctxNotification.Entry(user).State = user.id == 0 ? EntityState.Added : EntityState.Modified;
+                    dbReturn = ctxNotification.SaveChanges();
+                }
             }
-            return res;
+
+            return dbReturn;
         }
 
         private string Sha256encrypt(string phrase)
