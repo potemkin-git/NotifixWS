@@ -106,7 +106,6 @@ namespace Notifix.Controllers
             dynamic tmp = JsonConvert.DeserializeObject(jsonRequest);
             string loginReq = (string)tmp.login;
             string hashReq = (string)tmp.hash;
-
             Notification notif = JsonConvert.DeserializeObject<Notification>(jsonRequest);
             string dbReturn = "0";
 
