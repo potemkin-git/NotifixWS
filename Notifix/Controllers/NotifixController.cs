@@ -132,6 +132,40 @@ namespace Notifix.Controllers
             return dbReturn;
         }
 
+        [Route("votenotification")]
+        [HttpPost]
+        public int VoteNotification([FromBody]String jsonRequest)
+        {
+            dynamic tmp = JsonConvert.DeserializeObject(jsonRequest);
+            int notifId = (int)tmp.notifId;
+            int vote = (int)tmp.vote;
+            string login = (string)tmp.userLogin;
+            int dbReturn;
+
+            using (UserContext ctxUser = new UserContext())
+            {
+                using (NotificationContext ctxNotification = new NotificationContext())
+                {
+                Notification notification = ctxNotification.notificationList.Include(q => q.user).FirstOrDefault(q => q.id == notifId);
+                if (vote == 1)
+                {
+                    notification.nbConf++;
+                }
+                else if (vote == -1)
+                {
+                    notification.nbDeny++;
+                }
+
+                ctxNotification.notificationList.Attach(notification);
+                ctxNotification.Entry(notification).State = EntityState.Modified;
+                ctxNotification.Entry(notification.user).State = EntityState.Unchanged;
+                dbReturn = ctxNotification.SaveChanges();
+                }
+            }
+
+            return dbReturn;
+        }
+
         [Route("getNotifications")]
         [HttpGet]
         public JArray GetAllNotifications()
@@ -148,6 +182,7 @@ namespace Notifix.Controllers
                     String token = Sha256encrypt(user.login + user.password);
 
                     dynamic notifCustom = new JObject();
+                    notifCustom.id = notification.id;
                     notifCustom.userToken = token;
                     notifCustom.desc = notification.description;
                     notifCustom.type = notification.type;
