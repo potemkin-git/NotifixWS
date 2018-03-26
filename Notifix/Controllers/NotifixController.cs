@@ -79,6 +79,38 @@ namespace Notifix.Controllers
             return response;
         }
 
+
+        [Route("updateuser")]
+        [HttpPost]
+        public String UpdateUser([FromBody]String newUser)
+        {
+            User user = JsonConvert.DeserializeObject<User>(newUser);
+            user.password = Sha256encrypt(user.password);
+            string toHash = user.login + user.password;
+            var hashedString = Sha256encrypt(toHash);
+            String res;
+            using (UserContext ctx = new UserContext())
+            {
+                User usr = new User();
+                usr = ctx.userList.FirstOrDefault(q => q.login == user.login);
+                usr.address = user.address;
+                usr.avatarSrc = user.avatarSrc;
+                usr.city = user.city;
+                usr.email = user.email;
+                usr.firstName = user.firstName;
+                usr.lastName = user.lastName;
+                usr.password = toHash;
+
+                ctx.userList.Add(usr);
+                int dbReturn = ctx.SaveChanges();
+
+                res = dbReturn == 1 ? "200" + hashedString : "404";
+            }
+            return res;
+        }
+
+
+
         [Route("registeruser")]
         [HttpPost]
         public String RegisterUser([FromBody]String newUser)
@@ -88,7 +120,6 @@ namespace Notifix.Controllers
             string toHash = user.login + user.password;
             var hashedString = Sha256encrypt(toHash);
             String res;
-
             using (UserContext ctx = new UserContext())
             {
                 ctx.userList.Add(user);
@@ -98,6 +129,8 @@ namespace Notifix.Controllers
             }
             return res;
         }
+
+
 
         [Route("savenotification")]
         [HttpPost]
@@ -164,6 +197,34 @@ namespace Notifix.Controllers
             }
 
             return dbReturn;
+        }
+
+        [Route("userinfos")]
+        [HttpPost]
+        public JObject UserInfos([FromBody]String loginData)
+        {
+            dynamic tmp = JsonConvert.DeserializeObject(loginData);
+            string loginReq = (string)tmp.login;
+            string hashReq = (string)tmp.hash;
+
+            using (UserContext ctxUser = new UserContext())
+            {
+                User usr = new User();
+
+                dynamic notifCustom = new JObject();
+
+                usr = ctxUser.userList.FirstOrDefault(q => q.login == loginReq);
+                notifCustom.add = usr.address;
+                notifCustom.first = usr.firstName;
+                notifCustom.last = usr.lastName;
+                notifCustom.log = usr.login;
+                notifCustom.city = usr.city;
+                notifCustom.av = usr.avatarSrc;
+                notifCustom.mail = usr.email;
+                notifCustom.pass = usr.password;
+                return notifCustom;
+
+            }
         }
 
         [Route("getNotifications")]
