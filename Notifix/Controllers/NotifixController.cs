@@ -9,10 +9,8 @@ using System.Web.Http;
 using System.Web.Http.Cors;
 using Newtonsoft.Json.Linq;
 using Notifix.Models;
-using System.Security.Cryptography;
-using System.Text;
-using System.Net.Mail;
 using System.Data.Entity;
+using Notifix.Help;
 
 namespace Notifix.Controllers
 {
@@ -20,6 +18,8 @@ namespace Notifix.Controllers
     [RoutePrefix("notifix/api")]
     public class NotifixController : ApiController
     {
+        private Helper helper = new Helper();
+
         [Route("start")]
         [HttpGet]
         public String CheckService()
@@ -57,9 +57,9 @@ namespace Notifix.Controllers
         public String CheckLogin([FromBody]String loginData)
         {
             User user = JsonConvert.DeserializeObject<User>(loginData);
-            user.password = Sha256encrypt(user.password);
+            user.password = helper.Sha256encrypt(user.password);
             string toHash = user.login + user.password;
-            var hashedString = Sha256encrypt(toHash);
+            var hashedString = helper.Sha256encrypt(toHash);
             String response;
 
             using (UserContext ctx = new UserContext())
@@ -82,69 +82,37 @@ namespace Notifix.Controllers
 
         [Route("resetpassword")]
         [HttpPost]
-        public String ResetPassword([FromBody]String mail)
+        public String ResetPassword([FromBody]String jsonEmail)
         {
-            User user = JsonConvert.DeserializeObject<User>(mail);
-            string maill = user.email;
+            dynamic json = JsonConvert.DeserializeObject(jsonEmail);
+            string email = (string)json.email;
+
             using (UserContext ctx = new UserContext())
             {
-                User updatedUser = new User();
-                updatedUser = ctx.userList.FirstOrDefault(q => q.email == maill);
+                User updatedUser = ctx.userList.FirstOrDefault(q => q.email == email);
                 if (updatedUser == null)
                 {
                     return "401";
                 }
-                    string password = RandomString(15);
-                updatedUser.password = Sha256encrypt(password);
-                MailPassword(updatedUser.login, updatedUser.email, password);
+                string password = helper.RandomString();
+                updatedUser.password = helper.Sha256encrypt(password);
+                helper.MailPassword(updatedUser.login, updatedUser.email, password);
 
                 ctx.userList.Attach(updatedUser);
                 ctx.Entry(updatedUser).State = EntityState.Modified;
-                int dbReturn = ctx.SaveChanges();
+                ctx.SaveChanges();
             }
                 return "400";
         }
-
-        private static Random random = new Random();
-        public static string RandomString(int length)
-        {
-            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,?;.:/!§*";
-            return new string(Enumerable.Repeat(chars, length)
-              .Select(s => s[random.Next(s.Length)]).ToArray());
-        }
-
-        public void MailPassword(string login, string email, string password)
-        {
-            try
-            {
-                MailMessage mail = new MailMessage();
-                SmtpClient SmtpServer = new SmtpClient("smtp.gmail.com");
-
-                mail.From = new MailAddress("notifixmail@gmail.com");
-                mail.To.Add(email);
-                mail.Subject = "NOTIFIX: Reset Password";
-                mail.Body = "Dear " + login + ",\nhere is your new password, you can change it on Notifix:\n" + password + "\n See you soon on Notifix ! ";
-
-                SmtpServer.Port = 587;
-                SmtpServer.Credentials = new System.Net.NetworkCredential("notifixmail@gmail.com", "Notifix666");
-                SmtpServer.EnableSsl = true;
-
-                SmtpServer.Send(mail);
-            }
-            catch (Exception ex)
-            {
-            }
-        }
-
 
         [Route("registeruser")]
         [HttpPost]
         public String RegisterUser([FromBody]String newUser)
         {
             User user = JsonConvert.DeserializeObject<User>(newUser);
-            user.password = Sha256encrypt(user.password);
+            user.password = helper.Sha256encrypt(user.password);
             string toHash = user.login + user.password;
-            var hashedString = Sha256encrypt(toHash);
+            var hashedString = helper.Sha256encrypt(toHash);
             String res;
             using (UserContext ctx = new UserContext())
             {
@@ -175,7 +143,7 @@ namespace Notifix.Controllers
                 updatedUser.lastName = user.lastName;
                 if (user.password.Length > 0)
                 {
-                    updatedUser.password = Sha256encrypt(user.password);
+                    updatedUser.password = helper.Sha256encrypt(user.password);
                 }
 
                 ctx.userList.Attach(updatedUser);
@@ -200,7 +168,7 @@ namespace Notifix.Controllers
             {
                 User user = new User();
                 user = ctxUser.userList.FirstOrDefault(q => q.login == loginReq);
-                if (user == null || Sha256encrypt(user.login + user.password) != hashReq)
+                if (user == null || helper.Sha256encrypt(user.login + user.password) != hashReq)
                 {
                     userInfo = null;
                 }
@@ -236,7 +204,7 @@ namespace Notifix.Controllers
                     User user = ctxUser.userList.FirstOrDefault(q => q.login == loginReq);
                     if (user != null)
                     {
-                        string userHash = Sha256encrypt(user.login + user.password);
+                        string userHash = helper.Sha256encrypt(user.login + user.password);
                         if (userHash == hashReq)
                         {
                             notif.user = user;
@@ -299,15 +267,14 @@ namespace Notifix.Controllers
                 foreach (Notification notification in notifs)
                 {
                     User user = notification.user;
-                    String token = Sha256encrypt(user.login + user.password);
+                    String token = helper.Sha256encrypt(user.login + user.password);
 
                     dynamic notifCustom = new JObject();
                     notifCustom.id = notification.id;
                     notifCustom.userToken = token;
                     notifCustom.desc = notification.description;
                     notifCustom.type = notification.type;
-                    notifCustom.date = notification.expirationDate.ToString("dd-MM-yyyy");
-                    notifCustom.time = notification.expirationDate.ToString("h:mm");
+                    notifCustom.expDate = notification.expirationDate.ToString("dd-MM-yyyy h:mm");
                     notifCustom.lat = notification.latitude;
                     notifCustom.lng = notification.longitude;
                     notifCustom.nbConf = notification.nbConf;
@@ -318,17 +285,5 @@ namespace Notifix.Controllers
 
             return notifList;
         }
-
-        private string Sha256encrypt(string phrase)
-        {
-            UTF8Encoding encoder = new UTF8Encoding();
-            SHA256Managed sha256hasher = new SHA256Managed();
-            byte[] hashedDataBytes = sha256hasher.ComputeHash(encoder.GetBytes(phrase));
-            return Convert.ToBase64String(hashedDataBytes);
-        }
     }
-
-
-
-
 }
