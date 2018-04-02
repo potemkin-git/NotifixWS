@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Notifix.Models;
 using System.Security.Cryptography;
 using System.Text;
+using System.Net.Mail;
 using System.Data.Entity;
 
 namespace Notifix.Controllers
@@ -78,6 +79,63 @@ namespace Notifix.Controllers
 
             return response;
         }
+
+        [Route("resetpassword")]
+        [HttpPost]
+        public String ResetPassword([FromBody]String mail)
+        {
+            User user = JsonConvert.DeserializeObject<User>(mail);
+            string maill = user.email;
+            using (UserContext ctx = new UserContext())
+            {
+                User updatedUser = new User();
+                updatedUser = ctx.userList.FirstOrDefault(q => q.email == maill);
+                if (updatedUser == null)
+                {
+                    return "401";
+                }
+                    string password = RandomString(15);
+                updatedUser.password = Sha256encrypt(password);
+                MailPassword(updatedUser.login, updatedUser.email, password);
+
+                ctx.userList.Attach(updatedUser);
+                ctx.Entry(updatedUser).State = EntityState.Modified;
+                int dbReturn = ctx.SaveChanges();
+            }
+                return "400";
+        }
+
+        private static Random random = new Random();
+        public static string RandomString(int length)
+        {
+            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,?;.:/!§*";
+            return new string(Enumerable.Repeat(chars, length)
+              .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        public void MailPassword(string login, string email, string password)
+        {
+            try
+            {
+                MailMessage mail = new MailMessage();
+                SmtpClient SmtpServer = new SmtpClient("smtp.gmail.com");
+
+                mail.From = new MailAddress("notifixmail@gmail.com");
+                mail.To.Add(email);
+                mail.Subject = "NOTIFIX: Reset Password";
+                mail.Body = "Dear " + login + ",\nhere is your new password, you can change it on Notifix:\n" + password + "\n See you soon on Notifix ! ";
+
+                SmtpServer.Port = 587;
+                SmtpServer.Credentials = new System.Net.NetworkCredential("notifixmail@gmail.com", "Notifix666");
+                SmtpServer.EnableSsl = true;
+
+                SmtpServer.Send(mail);
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
 
         [Route("registeruser")]
         [HttpPost]
