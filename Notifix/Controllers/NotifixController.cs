@@ -80,6 +80,25 @@ namespace Notifix.Controllers
             return response;
         }
 
+        [Route("avatar")]
+        [HttpPost]
+        public String GetAvatar([FromBody]String jsonLogin)
+        {
+            dynamic json = JsonConvert.DeserializeObject(jsonLogin);
+            string login = (string)json.login;
+            string response = "none";
+            using (UserContext ctx = new UserContext())
+            {
+                User user = ctx.userList.FirstOrDefault(q => q.login == login);
+                if (user != null)
+                {
+                    response = user.avatarSrc;
+                }
+            }
+
+            return response;
+        }
+
         [Route("resetpassword")]
         [HttpPost]
         public String ResetPassword([FromBody]String jsonEmail)
@@ -177,10 +196,10 @@ namespace Notifix.Controllers
                     userInfo.address = user.address;
                     userInfo.firstName = user.firstName;
                     userInfo.lastName = user.lastName;
-                    userInfo.login = user.login;
                     userInfo.city = user.city;
                     userInfo.avatar = user.avatarSrc;
                     userInfo.mail = user.email;
+                    userInfo.id = user.id;
                 }
             }
 
@@ -218,6 +237,50 @@ namespace Notifix.Controllers
             }
 
             return dbReturn;
+        }
+
+        [Route("deletenotification")]
+        [HttpPost]
+        public string DeleteNotification([FromBody]String jsonIdNotif)
+        {
+            dynamic tmp = JsonConvert.DeserializeObject(jsonIdNotif);
+            int idNotif = (int)tmp.id;
+
+            using (NotificationContext ctxNotification = new NotificationContext())
+            {
+                Notification notif = ctxNotification.notificationList.FirstOrDefault(q => q.id == idNotif);
+                if (notif != null)
+                {
+                    ctxNotification.notificationList.Remove(notif);
+                    ctxNotification.Entry(notif).State = EntityState.Deleted;
+                    ctxNotification.SaveChanges();
+                    return "suppressed";
+                }                
+            }
+
+            return "error";
+        }
+
+        [Route("deleteuseraccount")]
+        [HttpPost]
+        public string DeleteUserAccount([FromBody]String jsonLogin)
+        {
+            dynamic tmp = JsonConvert.DeserializeObject(jsonLogin);
+            string login = (string)tmp.login;
+
+            using (UserContext ctxUser = new UserContext())
+            {
+                User user = ctxUser.userList.FirstOrDefault(q => q.login == login);
+                if (user != null)
+                {
+                    ctxUser.userList.Remove(user);
+                    ctxUser.Entry(user).State = EntityState.Deleted;
+                    ctxUser.SaveChanges();
+                    return "suppressed";
+                }
+            }
+
+            return "error";
         }
 
         [Route("votenotification")]
